@@ -1,0 +1,483 @@
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import java.awt.Color;
+import java.awt.Container;
+import acm.graphics.*;
+import acm.program.*;
+import java.awt.event.*;
+public class Picture extends JFrame{
+
+	static GCanvas canvas;
+	
+	static JButton restart;
+	
+	static JButton PAUSE;
+	
+	static Picture a;
+	
+	static Picture b;
+	
+	boolean shoot = false;
+	
+	int steeringAngle = 0;
+	
+	boolean dead = false;
+	
+	GOval body = new GOval(20,20);
+	
+	GLine gun = new GLine(0,0,0,0);
+	
+	static GRect a_bloodSlot = new GRect(330,20,100,10);
+	
+	static GRect a_life = new GRect(330,20,100,10);
+	
+	static GRect b_bloodSlot = new GRect(600,20,100,10);
+
+	static GRect b_life = new GRect(600,20,100,10);
+	
+	double X, Y, D;
+	
+	double speed = 0.5;
+	
+	static final double range = 360;
+	
+	static final int damage = 5;
+	
+	static final int ATTACK_FREQUENCY = 1000;
+	
+	int health = 100;
+	
+	long LastShoot;
+	
+	int status = 1;
+	
+	Color hue;
+	
+	static boolean pause = true;
+	
+	public Picture(){
+		
+	}
+	
+	public Picture(double x, double y, double direction, Color c, double s){
+		hue = c;
+		X = x;
+		Y = y;
+		D = direction*Math.PI/180;
+		speed = s;
+		LastShoot = System.currentTimeMillis();
+		body.setFilled(true);
+		body.setFillColor(hue);
+		body.setLocation(X, Y);
+		gun.setColor(Color.BLACK);
+		gun.setLocation(X+10, Y+10);
+		gun.setEndPoint(X+10+20*Math.cos(D), Y+10-20*Math.sin(D));
+		canvas.add(body);
+		canvas.add(gun);
+	}
+	
+	public void setup(){
+		this.setVisible(true);
+		this.setSize(1000,600);
+		canvas = new GCanvas();
+		this.add(canvas);
+		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		
+		restart = new JButton("NEW GAME");
+		PAUSE = new JButton("RESUME");
+		
+		restart.setBounds(10, 10, 180, 30);
+		PAUSE.setBounds(200, 10, 90, 30);
+		
+		restart.setVisible(true);
+		PAUSE.setVisible(true);
+		
+		PAUSE.addMouseListener(new MouseListener(){
+			public void mouseClicked(MouseEvent e){
+				if(pause){
+					pause = false;
+					PAUSE.setText("PAUSE");
+				}else{
+					pause = true;
+					PAUSE.setText("RESUME");
+				}
+			}
+			
+			public void mouseReleased(MouseEvent e){
+				
+			}
+			
+			public void mouseEntered(MouseEvent e){
+				
+			}
+			
+			public void mouseExited(MouseEvent e){
+				
+			}
+			
+			public void mousePressed(MouseEvent e){
+				
+			}
+		});
+		restart.addMouseListener(new MouseListener(){
+			public void mouseClicked(MouseEvent e){
+				reset();
+			}
+			
+			public void mouseReleased(MouseEvent e){
+				
+			}
+			
+			public void mouseEntered(MouseEvent e){
+				
+			}
+			
+			public void mouseExited(MouseEvent e){
+				
+			}
+			
+			public void mousePressed(MouseEvent e){
+				
+			}
+		});
+		
+		canvas.add(restart);
+		canvas.add(PAUSE);
+		
+		a = new Picture(100,100,0,Color.GREEN,1.2);
+		b = new Picture(800,400,180,Color.ORANGE,1);
+		
+		a_life.setFilled(true);
+		b_life.setFilled(true);
+		
+		a_life.setFillColor(Color.RED);
+		b_life.setFillColor(Color.RED);
+		
+		canvas.add(a_bloodSlot);
+		canvas.add(a_life);
+		canvas.add(b_bloodSlot);
+		canvas.add(b_life);
+		
+		GRect head1 = new GRect(300,10,30,30);
+		GRect head2 = new GRect(700,10,30,30);
+		
+		head1.setFilled(true);
+		head2.setFilled(true);
+		
+		head1.setFillColor(a.hue);
+		head2.setFillColor(b.hue);
+		
+		canvas.add(head1);
+		canvas.add(head2);
+		
+	}
+	
+	public static void keys(){
+		
+		restart.addKeyListener(new KeyListener(){
+			
+			public void keyPressed(KeyEvent e){
+				switch(e.getKeyCode()){
+					case 37:
+						a.steeringAngle = 1;
+						break;
+					case 38:
+						a.speed = 1.2;
+						break;
+					case 39:
+						a.steeringAngle = -1;
+						break;
+					case 40:
+						a.speed = 0;
+						break;
+					case 32:
+						a.shoot = true;
+						break;
+				}
+			}
+			
+			public void keyReleased(KeyEvent e){
+				a.steeringAngle = 0;
+				a.shoot = false;
+				
+			}
+			
+			public void keyTyped(KeyEvent e){
+				
+			}
+		});
+		
+		PAUSE.addKeyListener(new KeyListener(){
+			
+			public void keyPressed(KeyEvent e){
+				switch(e.getKeyCode()){
+				case 37:
+					a.steeringAngle = 1;
+					break;
+				case 38:
+					a.speed = 1.2;
+					break;
+				case 39:
+					a.steeringAngle = -1;
+					break;
+				case 40:
+					a.speed = 0;
+					break;
+				case 32:
+					a.shoot = true;
+					break;
+			}
+			}
+			
+			public void keyReleased(KeyEvent e){
+				a.steeringAngle = 0;
+				a.shoot = false;
+				
+			}
+			
+			public void keyTyped(KeyEvent e){
+				
+			}
+		});
+	}
+	
+	public static void move(Picture tank){
+
+		//double speed = tank.speed + 0.01*(100-tank.health);
+		if(tank==null||tank.dead==true){
+			
+		}else{
+			tank.X += tank.speed*(Math.cos(tank.D));
+			tank.Y -= tank.speed*(Math.sin(tank.D));
+			tank.body.setLocation(tank.X, tank.Y);
+			tank.gun.setLocation(tank.X+10, tank.Y+10);
+		}
+		checkTank(tank);
+	}
+	
+	public static void reset(){
+		pause = true;
+		
+			a.X = 100;
+			a.Y = 100;
+			b.X = 800;
+			b.Y = 400;
+			a.body.setLocation(a.X, a.Y);
+			b.body.setLocation(b.X, b.Y);
+			a.gun.setLocation(a.X+10, a.Y+10);
+			b.gun.setLocation(b.X+10, b.Y+10);
+			a.gun.setEndPoint(a.X+30, a.Y+10);
+			b.gun.setEndPoint(b.X-10, b.Y+10);
+			a.speed = 1.2;
+			b.speed = 1;
+			a.steeringAngle = 0;
+			b.steeringAngle = 0;
+			a.D = 0;
+			b.D = Math.PI/2;
+			a.health = 100;
+			b.health = 100;
+			a.dead = false;
+			b.dead = false;
+			a.body.setVisible(true);
+			a.gun.setVisible(true);
+			b.body.setVisible(true);
+			b.gun.setVisible(true);
+			a_life.setSize(a.health, 10);
+			b_life.setBounds(700-b.health, 20, b.health, 10);
+		
+	}
+	
+	public static void checkTank(Picture tank){
+		if(tank.health<=0){
+			die(tank);
+		}else if(tank.X<10){
+			tank.D = 0;
+			tank.gun.setEndPoint(tank.X+30, tank.Y+10);
+		}else if(tank.Y<60){
+			tank.D = Math.PI/(-2);
+			tank.gun.setEndPoint(tank.X+10, tank.Y+30);
+		}else if(tank.X+30>canvas.getWidth()){
+			tank.D = Math.PI;
+			tank.gun.setEndPoint(tank.X-10, tank.Y+10);
+		}else if(tank.Y+30>canvas.getHeight()){
+			tank.D = Math.PI/2;
+			tank.gun.setEndPoint(tank.X+10, tank.Y-10);
+		}
+		
+	}
+	
+	public static void go(Picture tank, int distance){
+		for(int i=0; i<distance;i++){
+			tank.gun.pause(20);
+			move(tank);
+		}
+	}
+	
+	public void steering(double num){
+		if(this!=null)
+		D += num*Math.PI/180;
+		gun.setEndPoint(X+10+20*Math.cos(D), Y+10-20*Math.sin(D));
+	}
+	
+	public void turnTo(Picture t2){
+		if(directionAim(t2)==false && this.dead==false && t2.dead==false){
+			double frontX = X+10+Math.cos(this.D), frontY = Y+10-Math.sin(this.D);
+			double leftX = X+10+Math.cos(this.D+(Math.PI/4)), leftY = Y+10-Math.sin(this.D+(Math.PI/4));
+			double rightX = X+10+Math.cos(this.D-(Math.PI/4)), rightY = Y+10-Math.sin(this.D-(Math.PI/4));
+			double l = distanceBetween(t2.X, t2.Y, leftX, leftY),r = distanceBetween(t2.X, t2.Y, rightX, rightY),
+					f = distanceBetween(t2.X, t2.Y, frontX, frontY),m = distanceBetween(t2.X, t2.Y, X+10, Y+10);
+			if(f>m){
+				this.steering(180);
+			}
+			
+			while(directionAim(t2)==false){
+				if(l>r)
+					this.steering(-1);
+				else
+					this.steering(1);
+			}
+			
+			while(enhancedAim(t2)==false){
+				if(l>r)
+					this.steering(-0.1);
+				else
+					this.steering(0.1);
+			}	
+			
+		}
+	}
+	
+	public void leftAim(Picture t2){
+		if(this.dead==false && t2.dead==false){
+			double frontX = X+10+Math.cos(this.D), frontY = Y+10-Math.sin(this.D);
+			double backX = X+10-Math.cos(this.D), backY = Y+10+Math.sin(this.D);
+			double b = distanceBetween(t2.X, t2.Y, backX, backY),
+					f = distanceBetween(t2.X, t2.Y, frontX, frontY),m = distanceBetween(t2.X, t2.Y, X+10, Y+10);
+			
+			while(leftAimTest(t2)==false){
+				if(b>f)
+					this.steering(-1);
+				else
+					this.steering(1);
+			}
+		}
+	}
+	
+	public void chase(Picture p){
+		turnTo(p);
+		if(distanceTo(p)>240)
+			speed = 1;
+		else
+			speed = 0;
+	}
+	
+	public static void explode(double x, double y, double r){
+		GOval flame = new GOval(x-r, y-r, 2*r,2*r);
+		flame.setFilled(true);
+		flame.setFillColor(Color.RED);
+		canvas.add(flame);
+		flame.pause(10);
+		flame.setFillColor(Color.YELLOW);
+		flame.pause(10);
+		flame.setFillColor(Color.RED);
+		flame.pause(10);
+		flame.setFillColor(Color.YELLOW);
+		flame.setVisible(false);
+		flame = null;
+		
+	}
+	
+	public double distanceTo(Picture p2){
+		return Math.sqrt((X-p2.X)*(X-p2.X)+(Y-p2.Y)*(Y-p2.Y));
+	}
+	
+	public static double distanceBetween(double x,double y, double m, double n){
+		return Math.sqrt((x-m)*(x-m)+(y-n)*(y-n));
+	}
+	
+	public boolean directionAim(Picture p2){
+		if(distanceBetween(p2.X,p2.Y,X+distanceTo(p2)*Math.cos(D),Y-distanceTo(p2)*Math.sin(D))<10){
+			return true;
+		}else
+			return false;
+	}
+	
+	public boolean enhancedAim(Picture p2){
+		if(distanceBetween(p2.X,p2.Y,X+distanceTo(p2)*Math.cos(D),Y-distanceTo(p2)*Math.sin(D))<5){
+			return true;
+		}else
+			return false;
+	}
+	
+	public boolean leftAimTest(Picture p2){
+		if(distanceBetween(p2.X,p2.Y,X+distanceTo(p2)*Math.cos(D+Math.PI/4),Y-distanceTo(p2)*Math.sin(D+Math.PI/4))<5){
+			return true;
+		}else
+			return false;
+	}
+	
+	public void shoot(Picture p2){
+		if(this.dead == false && p2.dead == false && System.currentTimeMillis()-LastShoot >= ATTACK_FREQUENCY){
+			LastShoot = System.currentTimeMillis();
+			if(distanceTo(p2)<range && this.directionAim(p2)){
+				GLine lazor = new GLine(X+10, Y+10, p2.X+10, p2.Y+10);
+				lazor.setColor(Color.RED);
+				canvas.add(lazor);
+				lazor.pause(20);
+				lazor.setVisible(false);
+				lazor = null;
+				explode(p2.X+10, p2.Y+10,8);
+				p2.health -= damage+(int)(damage*Math.random());
+				checkTank(p2);
+			}else{
+				GLine lazor = new GLine(X+10, Y+10, X+360*Math.cos(D), Y-360*Math.sin(D));
+				lazor.setColor(Color.red);
+				canvas.add(lazor);
+				lazor.pause(20);
+				lazor.setVisible(false);
+				lazor = null;
+		}
+		}
+	}
+	
+	public static void die(Picture tank){
+		pause = true;
+		tank.dead = true;
+		tank.body.setVisible(false);
+		tank.gun.setVisible(false);
+		for(int i=0;i<10;i++)
+			explode(tank.X+10, tank.Y+10, 16);
+	}
+	
+	public static void main(String[] args) {
+			Picture p = new Picture();
+			p.setup();
+			keys();
+			while(true){
+					int i = 0;
+					a.body.pause(20);
+					while((!pause)&&(!a.dead)&&(!b.dead)){
+						a.body.pause(20);	
+						i++;		
+						move(a);
+						move(b);
+						a.steering(a.steeringAngle);
+						if(a.shoot){
+							a.shoot(b);
+							b_life.setBounds(700-b.health, 20, b.health, 10);
+							a.shoot = false;
+						}
+						
+						if(i == 45)
+							b.chase(a);
+						
+						if(i==50){
+							b.shoot(a);
+							a_life.setSize(a.health, 10);
+							i = 0;
+						}
+						
+					}		
+			}
+	}
+}
